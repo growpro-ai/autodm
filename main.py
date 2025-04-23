@@ -1,19 +1,25 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from flask import Flask, request
 
-app = FastAPI()
+app = Flask(__name__)
 
-VERIFY_TOKEN = "your_custom_token_here"  # <-- Replace this with your own secret
+VERIFY_TOKEN = "4logitech"  # must match what you set in Meta dashboard
 
-@app.get("/webhook")
-async def verify(request: Request):
-    params = dict(request.query_params)
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
-        return JSONResponse(content=params.get("hub.challenge"))
-    return JSONResponse(content="Invalid verification", status_code=403)
+@app.route('/')
+def index():
+    return "Webhook is running!", 200
 
-@app.post("/webhook")
-async def receive_event(request: Request):
-    data = await request.json()
-    print("Received Webhook Event:", data)
-    return JSONResponse(content={"status": "received"}, status_code=200)
+@app.route('/webhook', methods=['GET', 'POST'])
+def webhook():
+    if request.method == 'GET':
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return challenge, 200
+        else:
+            return "Verification failed", 403
+
+    elif request.method == 'POST':
+        print("Received webhook data:", request.json)
+        return "Event received", 200
